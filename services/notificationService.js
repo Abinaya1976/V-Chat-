@@ -387,6 +387,28 @@ const notifyTodoAssigned = async ({ creator, assigneeId, todo, io }) => {
       io.to(`user:${recipientId}`).emit('notification:new', {
         notification: populated,
       });
+
+      // Unread count update
+      const unreadCount = await Notification.countDocuments({
+        recipient: recipientId,
+        isRead: false,
+      });
+      io.to(`user:${recipientId}`).emit('notification:unread_count', {
+        count: unreadCount,
+      });
+    }
+
+    // FCM Push Notification
+    const recipientUser = await User.findById(recipientId).select('fcmTokens settings');
+    if (recipientUser?.fcmTokens && recipientUser.fcmTokens.length > 0) {
+      sendPushToUser(recipientId, {
+        title: 'New To-Do Assigned',
+        body: notificationContent,
+        data: {
+          type: 'todo_assigned',
+          todoId: todo._id.toString(),
+        },
+      });
     }
 
     return populated;

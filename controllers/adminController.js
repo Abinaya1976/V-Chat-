@@ -378,6 +378,22 @@ const updateUserRole = async (req, res) => {
         ];
       }
 
+      // Enforce single admin rule: Demote all other admins to member
+      if (targetRole === 'admin') {
+        await Membership.updateMany(
+          { organization: orgId, role: 'admin', user: { $ne: id } },
+          { $set: { role: 'member', permissions: [] } }
+        );
+      }
+      
+      // Enforce single owner rule: Demote all other owners to admin/member
+      if (targetRole === 'owner') {
+        await Membership.updateMany(
+          { organization: orgId, role: 'owner', user: { $ne: id } },
+          { $set: { role: 'member', permissions: [] } }
+        );
+      }
+
       await membership.save();
 
       await createAuditRecord({

@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const User = require('../models/User');
 const Conversation = require('../models/Conversation');
 const Channel = require('../models/Channel');
+const Membership = require('../models/Membership');
 
 let ioInstance = null;
 
