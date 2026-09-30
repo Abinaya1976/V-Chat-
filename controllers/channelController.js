@@ -837,10 +837,13 @@ const sendChannelMessage = async (req, res) => {
     if (attachments.length > 0) {
       const allImages = attachments.every((att) => att.fileType.startsWith('image/'));
       const allVideos = attachments.every((att) => att.fileType.startsWith('video/'));
+      const allAudio = attachments.every((att) => att.fileType.startsWith('audio/'));
       if (allImages) {
         messageType = 'image';
       } else if (allVideos) {
         messageType = 'video';
+      } else if (allAudio && req.body.messageType === 'audio') {
+        messageType = 'audio';
       } else {
         messageType = 'file';
       }

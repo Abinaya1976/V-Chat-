@@ -613,6 +613,7 @@ const initSocket = (io) => {
                   roomId: data.roomId,
                   contextName: data.contextName,
                   channelId: data.channelId,
+                  audioOnly: data.audioOnly,
                 });
               }
             });
@@ -624,7 +625,7 @@ const initSocket = (io) => {
               sender: userId,
               messageType: 'call',
               call: {
-                callType: 'video',
+                callType: data.audioOnly ? 'audio' : 'video',
                 status: 'started',
                 duration: 0
               }
@@ -655,6 +656,7 @@ const initSocket = (io) => {
                   roomId: data.roomId,
                   contextName: data.contextName,
                   conversationId: data.conversationId,
+                  audioOnly: data.audioOnly,
                 });
               }
             });
