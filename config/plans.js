@@ -20,10 +20,10 @@ const PLAN_ENTITLEMENTS = {
     maxFileSizeBytes: 250 * 1024 * 1024, // 250 MB per file (LOCAL TESTING)
     maxFileSizeMB: 250, // (LOCAL TESTING)
     storagePerUser: false, // Shared workspace storage
-    // sharedStorageBytes: 10 * 1024 * 1024 * 1024, // 10 GB shared storage (PRODUCTION)
-    // sharedStorageGB: 10, // (PRODUCTION)
-    sharedStorageBytes: 1 * 1024 * 1024 * 1024, // 1 GB shared storage (LOCAL TESTING)
-    sharedStorageGB: 1, // (LOCAL TESTING)
+    sharedStorageBytes: 10 * 1024 * 1024 * 1024, // 10 GB shared storage (PRODUCTION)
+    sharedStorageGB: 10, // (PRODUCTION)
+    // sharedStorageBytes: 1 * 1024 * 1024 * 1024, // 1 GB shared storage (LOCAL TESTING)
+    // sharedStorageGB: 1, // (LOCAL TESTING)
     messageHistoryDays: 100, // 100-day rolling history/search
     features: {
       publicChannels: true,
@@ -42,10 +42,10 @@ const PLAN_ENTITLEMENTS = {
     maxFileSizeBytes: 250 * 1024 * 1024, // 250 MB per file (LOCAL TESTING)
     maxFileSizeMB: 250, // (LOCAL TESTING)
     storagePerUser: true, // 10 GB per user
-    // storagePerUserBytes: 10 * 1024 * 1024 * 1024, // 10 GB per user (PRODUCTION)
-    // storagePerUserGB: 10, // (PRODUCTION)
-    storagePerUserBytes: 1 * 1024 * 1024 * 1024, // 1 GB per user (LOCAL TESTING)
-    storagePerUserGB: 1, // (LOCAL TESTING)
+    storagePerUserBytes: 10 * 1024 * 1024 * 1024, // 10 GB per user (PRODUCTION)
+    storagePerUserGB: 10, // (PRODUCTION)
+    // storagePerUserBytes: 1 * 1024 * 1024 * 1024, // 1 GB per user (LOCAL TESTING)
+    // storagePerUserGB: 1, // (LOCAL TESTING)
     messageHistoryDays: null, // Unlimited / permanent history
     features: {
       publicChannels: true,

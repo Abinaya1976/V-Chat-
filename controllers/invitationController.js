@@ -106,7 +106,7 @@ const createInvitation = async (req, res) => {
     const orgName = org?.name || 'an organization';
     const inviterName = req.user.name || 'Company Administrator';
     const clientUrl = process.env.CLIENT_URL || `${req.protocol}://${req.get('host')}`;
-    const acceptUrl = `${clientUrl}/accept-invitation?token=${token}`;
+    const acceptUrl = `${clientUrl}/?token=${token}`;
 
     try {
       await sendBrevoInvitationEmail({

@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const User = require('../models/User');
+const Membership = require('../models/Membership');
 const Organization = require('../models/Organization');
 const Notification = require('../models/Notification');
 const { notifyDirectMessage } = require('../services/notificationService');
