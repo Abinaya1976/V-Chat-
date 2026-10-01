@@ -243,17 +243,10 @@ const updateSettings = async (req, res) => {
       });
       // Broadcast presence change if onlineStatus privacy was changed
       if (privacy?.onlineStatus !== undefined) {
-        if (safeUser.settings?.privacy?.onlineStatus === false) {
-          io.emit('user:offline', {
-            userId,
-            lastSeenAt: safeUser.settings?.privacy?.lastSeen === false ? null : new Date()
-          });
-        } else {
-          io.emit('user:online', {
-            userId,
-            userName: safeUser.name,
-          });
-        }
+        io.emit('user:presence_visibility_changed', {
+          userId,
+          onlineStatus: safeUser.settings?.privacy?.onlineStatus,
+        });
       }
     }
 

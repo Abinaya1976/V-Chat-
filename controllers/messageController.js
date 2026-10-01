@@ -9,8 +9,6 @@ const {
   notifyDirectMessage,
   notifyChannelMessage,
 } = require('../services/notificationService');
-const storageService = require('../services/storageService');
-
 
 // @desc    Mark a message as read
 // @route   PATCH /api/messages/:messageId/read
@@ -43,13 +41,8 @@ const markMessageAsRead = async (req, res) => {
       });
     }
 
-    const readerUser = await User.findById(userId).select('settings');
-    const sendReadReceipts = readerUser?.settings?.privacy?.readReceipts !== false;
-
-    if (sendReadReceipts) {
-      message.isRead = true;
-      await message.save();
-    }
+    message.isRead = true;
+    await message.save();
 
     // Mark any corresponding notification for this user & message as read
     const matchedNotifs = await Notification.find({
@@ -68,14 +61,12 @@ const markMessageAsRead = async (req, res) => {
     // Real-Time Socket.IO event emission for read receipt & notification sync
     const io = req.app.get('io');
     if (io) {
-      if (sendReadReceipts) {
-        const rooms = [`conversation:${message.conversationId.toString()}`, `user:${message.sender.toString()}`];
-        io.to(rooms).emit('message:read', {
-          messageId: message._id,
-          conversationId: message.conversationId,
-          readBy: userId,
-        });
-      }
+      const rooms = [`conversation:${message.conversationId.toString()}`, `user:${message.sender.toString()}`];
+      io.to(rooms).emit('message:read', {
+        messageId: message._id,
+        conversationId: message.conversationId,
+        readBy: userId,
+      });
     }
 
     return res.status(200).json({
@@ -123,18 +114,13 @@ const markMessagesAsRead = async (req, res) => {
     const readAt = new Date();
     const accessibleIds = accessible.map((m) => m._id);
 
-    const readerUser = await User.findById(userId).select('settings');
-    const sendReadReceipts = readerUser?.settings?.privacy?.readReceipts !== false;
-
-    if (sendReadReceipts) {
-      await Message.updateMany(
-        { _id: { $in: accessibleIds } },
-        {
-          $set: { isRead: true },
-          $addToSet: { readBy: { userId, readAt } },
-        }
-      );
-    }
+    await Message.updateMany(
+      { _id: { $in: accessibleIds } },
+      {
+        $set: { isRead: true },
+        $addToSet: { readBy: { userId, readAt } },
+      }
+    );
 
     const scopesConv = accessible.filter((m) => m.conversationId).map((m) => m.conversationId);
     const scopesChan = accessible.filter((m) => m.channelId).map((m) => m.channelId);
@@ -166,7 +152,8 @@ const markMessagesAsRead = async (req, res) => {
       ...(orgId ? { organization: orgId } : {}),
     });
 
-    // readerUser and sendReadReceipts already defined above
+    const readerUser = await User.findById(userId).select('settings');
+    const sendReadReceipts = readerUser?.settings?.privacy?.readReceipts !== false;
 
     const io = req.app.get('io');
     if (io) {
@@ -398,44 +385,6 @@ const deleteMessage = async (req, res) => {
             success: false,
             message: 'Only channel admins can delete messages in this channel',
           });
-        }
-      }
-    }
-
-    // Phase 6: MinIO cleanup and Storage Quota decrement
-    if (message.attachments && message.attachments.length > 0) {
-      const storageService = require('../services/storageService');
-      const User = require('../models/User');
-      const Organization = require('../models/Organization');
-      
-      let totalFreedBytes = 0;
-      
-      for (const att of message.attachments) {
-        if (att.fileKey) {
-          try {
-            await storageService.deleteFile(att.fileKey);
-            totalFreedBytes += att.fileSize || 0;
-          } catch (e) {
-            console.error('Failed to delete file from MinIO:', e.message);
-          }
-        }
-      }
-
-      if (totalFreedBytes > 0) {
-        try {
-          const [user, org] = await Promise.all([
-            User.findByIdAndUpdate(message.sender, { $inc: { storageUsedBytes: -totalFreedBytes } }, { new: true }),
-            Organization.findByIdAndUpdate(message.organization, { $inc: { storageUsedBytes: -totalFreedBytes } }, { new: true })
-          ]);
-          
-          if (user && user.storageUsedBytes < 0) {
-            await User.findByIdAndUpdate(user._id, { storageUsedBytes: 0 });
-          }
-          if (org && org.storageUsedBytes < 0) {
-            await Organization.findByIdAndUpdate(org._id, { storageUsedBytes: 0 });
-          }
-        } catch (err) {
-          console.error('Failed to release storage usage:', err.message);
         }
       }
     }
@@ -1050,30 +999,6 @@ const removeReaction = async (req, res) => {
   }
 };
 
-// @desc    Download a file attachment using presigned URL
-// @route   GET /api/messages/download?key=...
-// @access  Private
-const downloadAttachment = async (req, res) => {
-  try {
-    const { key } = req.query;
-    if (!key) {
-      return res.status(400).json({ success: false, message: 'File key is required' });
-    }
-
-    const orgId = req.user.currentOrganizationId;
-    if (!key.startsWith(`organizations/${orgId}/`)) {
-      return res.status(403).json({ success: false, message: 'Unauthorized access to this file' });
-    }
-
-    const downloadUrl = await storageService.generateDownloadUrl(key);
-    return res.redirect(downloadUrl);
-  } catch (error) {
-    console.error('Download Attachment Error:', error.message);
-    return res.status(500).json({ success: false, message: 'Failed to generate download URL' });
-  }
-};
-
-
 module.exports = {
   markMessageAsRead,
   markMessagesAsRead,
@@ -1084,5 +1009,4 @@ module.exports = {
   forwardMessage,
   addReaction,
   removeReaction,
-  downloadAttachment,
 };

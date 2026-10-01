@@ -35,11 +35,6 @@ const organizationSchema = new mongoose.Schema(
       allowMemberInvites: { type: Boolean, default: true },
       allowMemberChannelDeletion: { type: Boolean, default: false },
     },
-    storageUsedBytes: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
     // Top-level organization status
     status: {
       type: String,

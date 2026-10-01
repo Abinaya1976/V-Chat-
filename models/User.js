@@ -61,11 +61,6 @@ const userSchema = new mongoose.Schema({
     enum: ['reminder', 'calendar', 'system', 'none'],
     default: 'none',
   },
-  storageUsedBytes: {
-    type: Number,
-    default: 0,
-    min: 0,
-  },
   lastSeenAt: {
     type: Date,
     default: null,

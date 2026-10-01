@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const User = require('../models/User');
 const Conversation = require('../models/Conversation');
 const Channel = require('../models/Channel');
-const Membership = require('../models/Membership');
 
 let ioInstance = null;
 
@@ -560,6 +559,27 @@ const initSocket = (io) => {
             channelId: data.channelId,
             conversationId: data.conversationId,
           });
+
+          try {
+            const { sendPushToUser } = require('./pushNotificationService');
+            await sendPushToUser(data.inviteeId, {
+              title: `Incoming Video Call`,
+              body: `From ${socket.user.name}`,
+              data: {
+                type: 'call',
+                callType: 'video',
+                callerId: String(userId),
+                callerName: String(socket.user.name || 'Caller'),
+                callerAvatar: String(socket.user.avatar || ''),
+                roomId: String(data.roomId || ''),
+                conversationId: String(data.conversationId || ''),
+                channelId: String(data.channelId || ''),
+              }
+            });
+            console.log(`[CALL PUSH] Dispatched LiveKit video call push to user ${data.inviteeId}`);
+          } catch (pushErr) {
+            console.error('[CALL PUSH ERROR]', pushErr.message);
+          }
         } catch (err) {
           console.error('Error saving LiveKit invitation:', err.message);
         }
@@ -613,7 +633,6 @@ const initSocket = (io) => {
                   roomId: data.roomId,
                   contextName: data.contextName,
                   channelId: data.channelId,
-                  audioOnly: data.audioOnly,
                 });
               }
             });
@@ -625,7 +644,7 @@ const initSocket = (io) => {
               sender: userId,
               messageType: 'call',
               call: {
-                callType: data.audioOnly ? 'audio' : 'video',
+                callType: 'video',
                 status: 'started',
                 duration: 0
               }
@@ -640,9 +659,21 @@ const initSocket = (io) => {
       }
     });
 
-    socket.on('livekit:start_group_call', async (data) => {
-      // data: { conversationId, roomId, contextName }
+    socket.on('livekit:start_group_call', async (data, callback) => {
+      // data: { conversationId, roomId, contextName, audioOnly }
       if (data.conversationId) {
+        // Enforce authoritative call type for active session
+        if (!activeLiveKitCalls.has(data.roomId)) {
+          activeLiveKitCalls.set(data.roomId, { callType: !!data.audioOnly, users: new Set() });
+        }
+        const session = activeLiveKitCalls.get(data.roomId);
+        session.users.add(userId);
+        data.audioOnly = session.callType;
+
+        if (typeof callback === 'function') {
+          callback({ audioOnly: data.audioOnly });
+        }
+
         const Conversation = require('../models/Conversation');
         try {
           const conversation = await Conversation.findById(data.conversationId);

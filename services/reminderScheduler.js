@@ -3,7 +3,6 @@ const Notification = require('../models/Notification');
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const User = require('../models/User');
-const { sendPushToUser } = require('./pushNotificationService');
 
 /**
  * Calculate the next reminder time for repeating reminders
@@ -160,22 +159,6 @@ const initReminderScheduler = (io) => {
             conversation.lastMessage = botMessage._id;
             conversation.lastMessageAt = botMessage.createdAt;
             await conversation.save();
-
-            // Dispatch Push Notification
-            try {
-              await sendPushToUser(reminder.userId, {
-                title: 'V Chat Reminder',
-                body: messageContent,
-                data: {
-                  type: 'reminder',
-                  reminderId: reminder._id.toString(),
-                  conversationId: conversation._id.toString(),
-                  url: `/`
-                }
-              });
-            } catch (pushErr) {
-              console.error('Error dispatching push notification for reminder:', pushErr.message);
-            }
             
             // Emit new message event to the user
             if (io && userIdStr) {

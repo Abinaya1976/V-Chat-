@@ -554,65 +554,6 @@ const upgradeOrganizationPlan = async (req, res) => {
   }
 };
 
-// @desc    Get organization storage metrics (Admin only)
-// @route   GET /api/organizations/:id/storage
-// @access  Private
-const getOrganizationStorage = async (req, res) => {
-  try {
-    const orgId = req.params.id;
-    const userId = req.user.id;
-    const userRole = req.user.role;
-
-    const org = await Organization.findById(orgId);
-    if (!org) {
-      return res.status(404).json({ success: false, message: 'Organization not found' });
-    }
-
-    // Security requirement: Must be company admin/owner/super_admin
-    let isCompanyAdmin = userRole === 'super_admin';
-    if (!isCompanyAdmin) {
-      const membership = await Membership.findOne({ user: userId, organization: orgId });
-      if (membership && (membership.role === 'admin' || membership.role === 'owner')) {
-        isCompanyAdmin = true;
-      } else if (userRole === 'admin' || userRole === 'owner') {
-         isCompanyAdmin = true; // Fallback for global admin
-      }
-    }
-
-    if (!isCompanyAdmin) {
-      return res.status(403).json({
-        success: false,
-        message: 'Forbidden: Storage management is restricted to company admins.',
-      });
-    }
-
-    const { getPlanEntitlements, getOrganizationStorageLimitBytes } = require('../config/plans');
-    const planEntitlements = getPlanEntitlements(org.plan);
-
-    const activeMemberCount = await Membership.countDocuments({
-      organization: orgId,
-      status: 'active',
-    });
-
-    const totalStorageLimitBytes = getOrganizationStorageLimitBytes(org.plan, activeMemberCount);
-    const currentUsedBytes = org.storageUsedBytes || 0;
-
-    return res.status(200).json({
-      success: true,
-      currentUsedBytes,
-      totalStorageLimitBytes,
-      planName: planEntitlements.name,
-      isPerUser: planEntitlements.storagePerUser,
-    });
-  } catch (error) {
-    console.error('Get Organization Storage Error:', error.message);
-    return res.status(500).json({
-      success: false,
-      message: 'Server error retrieving storage metrics',
-    });
-  }
-};
-
 module.exports = {
   registerAndCreateCompany,
   createOrganization,
@@ -621,6 +562,5 @@ module.exports = {
   getOrganizationPlanDetails,
   upgradeOrganizationPlan,
   createOrgAuditRecord,
-  getOrganizationStorage,
 };
 

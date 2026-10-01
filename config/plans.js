@@ -15,15 +15,11 @@ const PLAN_ENTITLEMENTS = {
     priceINR: 0,
     maxMembers: 20, // Maximum 20 members (blocks member #21)
     maxChannels: 10, // Maximum 10 channels (blocks channel #11)
-    // maxFileSizeBytes: 50 * 1024 * 1024, // 50 MB per file (PRODUCTION)
-    // maxFileSizeMB: 50, // (PRODUCTION)
-    maxFileSizeBytes: 250 * 1024 * 1024, // 250 MB per file (LOCAL TESTING)
-    maxFileSizeMB: 250, // (LOCAL TESTING)
+    maxFileSizeBytes: 50 * 1024 * 1024, // 50 MB per file
+    maxFileSizeMB: 50,
     storagePerUser: false, // Shared workspace storage
-    sharedStorageBytes: 10 * 1024 * 1024 * 1024, // 10 GB shared storage (PRODUCTION)
-    sharedStorageGB: 10, // (PRODUCTION)
-    // sharedStorageBytes: 1 * 1024 * 1024 * 1024, // 1 GB shared storage (LOCAL TESTING)
-    // sharedStorageGB: 1, // (LOCAL TESTING)
+    sharedStorageBytes: 10 * 1024 * 1024 * 1024, // 10 GB shared storage
+    sharedStorageGB: 10,
     messageHistoryDays: 100, // 100-day rolling history/search
     features: {
       publicChannels: true,
@@ -37,15 +33,11 @@ const PLAN_ENTITLEMENTS = {
     priceINR: 100, // ₹100 / user / month
     maxMembers: null, // Unlimited members
     maxChannels: null, // Unlimited channels
-    // maxFileSizeBytes: 200 * 1024 * 1024, // 200 MB per file (PRODUCTION)
-    // maxFileSizeMB: 200, // (PRODUCTION)
-    maxFileSizeBytes: 250 * 1024 * 1024, // 250 MB per file (LOCAL TESTING)
-    maxFileSizeMB: 250, // (LOCAL TESTING)
+    maxFileSizeBytes: 200 * 1024 * 1024, // 200 MB per file
+    maxFileSizeMB: 200,
     storagePerUser: true, // 10 GB per user
-    storagePerUserBytes: 10 * 1024 * 1024 * 1024, // 10 GB per user (PRODUCTION)
-    storagePerUserGB: 10, // (PRODUCTION)
-    // storagePerUserBytes: 1 * 1024 * 1024 * 1024, // 1 GB per user (LOCAL TESTING)
-    // storagePerUserGB: 1, // (LOCAL TESTING)
+    storagePerUserBytes: 10 * 1024 * 1024 * 1024, // 10 GB per user
+    storagePerUserGB: 10,
     messageHistoryDays: null, // Unlimited / permanent history
     features: {
       publicChannels: true,
@@ -65,7 +57,6 @@ function normalizePlanCode(planStr) {
   const lower = String(planStr).toLowerCase().trim();
   if (lower === PLANS.PROFESSIONAL) return PLANS.PROFESSIONAL;
   return PLANS.FREE;
-  
 }
 
 /**

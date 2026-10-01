@@ -66,21 +66,30 @@ const fileFilter = (req, file, cb) => {
     );
   }
 
-  // B. If video file extension is used, validate allowed video MIME type
-  if (ALLOWED_VIDEO_EXTENSIONS.has(ext)) {
+  // B. Validation for ambiguous extensions (e.g., .webm can be audio or video)
+  if (ext === '.webm') {
+    if (file.mimetype !== 'video/webm' && file.mimetype !== 'audio/webm') {
+      return cb(
+        new Error(`Invalid MIME type "${file.mimetype}" for extension ".webm". Allowed: video/webm, audio/webm.`),
+        false
+      );
+    }
+  } 
+  // C. For other video extensions, validate strictly against video MIME types
+  else if (ALLOWED_VIDEO_EXTENSIONS.has(ext)) {
     if (!ALLOWED_VIDEO_MIMES.has(file.mimetype)) {
       return cb(
         new Error(
-          `Invalid video MIME type "${file.mimetype}" for extension "${ext}". Allowed: MP4, WebM, MOV.`
+          `Invalid video MIME type "${file.mimetype}" for extension "${ext}". Allowed: MP4, MOV.`
         ),
         false
       );
     }
   }
 
-  // C. If video MIME type is used, validate allowed video extension
+  // D. If video MIME type is used, validate allowed video extension
   if (file.mimetype.startsWith('video/')) {
-    if (!ALLOWED_VIDEO_EXTENSIONS.has(ext) || !ALLOWED_VIDEO_MIMES.has(file.mimetype)) {
+    if (ext !== '.webm' && (!ALLOWED_VIDEO_EXTENSIONS.has(ext) || !ALLOWED_VIDEO_MIMES.has(file.mimetype))) {
       return cb(
         new Error(
           'Unsupported video format. Please upload MP4 (.mp4), WebM (.webm), or MOV (.mov).'
@@ -171,7 +180,7 @@ const handleUpload = (fieldName = 'files', maxCount = 5) => {
             return res.status(413).json({
               success: false,
               message: `File "${file.originalname}" (${(file.size / (1024 * 1024)).toFixed(1)} MB) exceeds maximum allowed size of ${maxFileSizeMB} MB for ${planEntitlements.name} plan.`,
-              code: 'FILE_SIZE_LIMIT_EXCEEDED',
+              code: 'PLAN_FILE_SIZE_EXCEEDED',
             });
           }
         }
@@ -181,36 +190,40 @@ const handleUpload = (fieldName = 'files', maxCount = 5) => {
           try {
             const totalStorageLimitBytes = getOrganizationStorageLimitBytes(planEntitlements.code, activeMemberCount);
 
-            let currentUsedBytes = 0;
-            if (planEntitlements.storagePerUser) {
-              const user = await mongoose.model('User').findById(req.user.id);
-              currentUsedBytes = user?.storageUsedBytes || 0;
-            } else {
-              const org = await mongoose.model('Organization').findById(orgId);
-              currentUsedBytes = org?.storageUsedBytes || 0;
-            }
+            const storageResult = await Message.aggregate([
+              { $match: { organization: new mongoose.Types.ObjectId(orgId), 'attachments.0': { $exists: true } } },
+              { $unwind: '$attachments' },
+              { $group: { _id: null, totalUsedBytes: { $sum: '$attachments.fileSize' } } },
+            ]);
+            const currentUsedBytes = storageResult[0]?.totalUsedBytes || 0;
 
             if (currentUsedBytes + incomingBatchSize > totalStorageLimitBytes) {
               cleanupUploadedFiles();
               const limitGB = (totalStorageLimitBytes / (1024 * 1024 * 1024)).toFixed(1);
               const usedGB = (currentUsedBytes / (1024 * 1024 * 1024)).toFixed(2);
               
-              // 🤖 Trigger System Bot Notification (Direct Message to User)
+              // 🤖 Trigger System Bot Notification
               const { dispatchSystemBotMessage } = require('../services/botService');
               const io = req.app ? req.app.get('io') : null;
+              const isChannel = req.baseUrl.includes('/channels');
+              const isConversation = req.baseUrl.includes('/conversations');
+              const targetId = req.params.id;
               
-              dispatchSystemBotMessage({
-                botType: 'system',
-                content: `⚠️ Storage limit crossed! Your workspace storage is full (${usedGB} GB of ${limitGB} GB used).`,
-                userId: req.user.id,
-                organizationId: orgId,
-                io
-              }).catch(err => console.error('Failed to send storage bot message', err));
+              if (targetId && (isChannel || isConversation)) {
+                dispatchSystemBotMessage({
+                  botType: 'system',
+                  content: `⚠️ Workspace storage limit reached (${usedGB} GB of ${limitGB} GB used). The attempted file upload was blocked. Please free up space or ask an admin to upgrade the plan.`,
+                  channelId: isChannel ? targetId : undefined,
+                  conversationId: isConversation ? targetId : undefined,
+                  organizationId: orgId,
+                  io
+                }).catch(err => console.error('Failed to send storage bot message', err));
+              }
 
               return res.status(413).json({
                 success: false,
-                message: `Storage limit reached. You can't upload this file because your workspace storage is full (${usedGB} GB of ${limitGB} GB used).`,
-                code: 'STORAGE_LIMIT_EXCEEDED',
+                message: `Workspace storage limit reached (${usedGB} GB of ${limitGB} GB used). Upgrade to Professional for more storage capacity.`,
+                code: 'PLAN_STORAGE_EXCEEDED',
               });
             }
           } catch (e) {

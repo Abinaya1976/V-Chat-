@@ -2,9 +2,9 @@ const mongoose = require('mongoose');
 
 const attachmentSchema = new mongoose.Schema(
   {
-    fileKey: {
+    fileUrl: {
       type: String,
-      required: [true, 'File key is required'],
+      required: [true, 'File URL is required'],
     },
     fileName: {
       type: String,
@@ -19,17 +19,8 @@ const attachmentSchema = new mongoose.Schema(
       required: [true, 'File size is required'],
     },
   },
-  { 
-    _id: false,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true }
-  }
+  { _id: false }
 );
-
-attachmentSchema.virtual('fileUrl').get(function () {
-  if (!this.fileKey) return '';
-  return `/api/messages/download?key=${encodeURIComponent(this.fileKey)}`;
-});
 
 const pollOptionSchema = new mongoose.Schema(
   {
@@ -106,7 +97,7 @@ const messageSchema = new mongoose.Schema(
     },
     messageType: {
       type: String,
-      enum: ['text', 'image', 'video', 'file', 'poll', 'call', 'audio'],
+      enum: ['text', 'image', 'video', 'file', 'poll', 'call'],
       default: 'text',
     },
     attachments: {
@@ -127,7 +118,7 @@ const messageSchema = new mongoose.Schema(
           },
           status: {
             type: String,
-            enum: ['started', 'ended', 'missed', 'declined', 'cancelled'],
+            enum: ['ended', 'missed', 'declined', 'cancelled'],
             default: 'ended',
           },
           duration: {
@@ -222,8 +213,6 @@ const messageSchema = new mongoose.Schema(
   },
   {
     timestamps: true, // Automatically manages createdAt and updatedAt
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true }
   }
 );
 

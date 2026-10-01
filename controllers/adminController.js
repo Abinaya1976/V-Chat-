@@ -378,22 +378,6 @@ const updateUserRole = async (req, res) => {
         ];
       }
 
-      // Enforce single admin rule: Demote all other admins to member
-      if (targetRole === 'admin') {
-        await Membership.updateMany(
-          { organization: orgId, role: 'admin', user: { $ne: id } },
-          { $set: { role: 'member', permissions: [] } }
-        );
-      }
-      
-      // Enforce single owner rule: Demote all other owners to admin/member
-      if (targetRole === 'owner') {
-        await Membership.updateMany(
-          { organization: orgId, role: 'owner', user: { $ne: id } },
-          { $set: { role: 'member', permissions: [] } }
-        );
-      }
-
       await membership.save();
 
       await createAuditRecord({
@@ -1630,44 +1614,6 @@ const deleteMessage = async (req, res) => {
       message.content?.slice(0, 40) ||
       message.attachments?.[0]?.fileName ||
       'Attachment';
-
-    // Phase 6: MinIO cleanup and Storage Quota decrement before hard delete
-    if (message.attachments && message.attachments.length > 0) {
-      const storageService = require('../services/storageService');
-      const User = require('../models/User');
-      const Organization = require('../models/Organization');
-      
-      let totalFreedBytes = 0;
-      
-      for (const att of message.attachments) {
-        if (att.fileKey) {
-          try {
-            await storageService.deleteFile(att.fileKey);
-            totalFreedBytes += att.fileSize || 0;
-          } catch (e) {
-            console.error('Admin - Failed to delete file from MinIO:', e.message);
-          }
-        }
-      }
-
-      if (totalFreedBytes > 0) {
-        try {
-          const [user, org] = await Promise.all([
-            User.findByIdAndUpdate(message.sender, { $inc: { storageUsedBytes: -totalFreedBytes } }, { new: true }),
-            Organization.findByIdAndUpdate(message.organization, { $inc: { storageUsedBytes: -totalFreedBytes } }, { new: true })
-          ]);
-          
-          if (user && user.storageUsedBytes < 0) {
-            await User.findByIdAndUpdate(user._id, { storageUsedBytes: 0 });
-          }
-          if (org && org.storageUsedBytes < 0) {
-            await Organization.findByIdAndUpdate(org._id, { storageUsedBytes: 0 });
-          }
-        } catch (err) {
-          console.error('Admin - Failed to release storage usage:', err.message);
-        }
-      }
-    }
 
     await Message.findByIdAndDelete(id);
 

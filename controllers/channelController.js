@@ -717,7 +717,19 @@ const sendChannelMessage = async (req, res) => {
     const replyTo = req.body.replyTo ? req.body.replyTo.toString().trim() : null;
     const senderId = req.user.id;
 
-    if (!content && (!req.files || req.files.length === 0) && !req.body.poll) {
+    // Parse uploaded files (if any)
+    console.log("sendChannelMessage body:", req.body);
+    console.log("sendChannelMessage files:", req.files);
+    
+    const attachments = (req.files || []).map((file) => ({
+      fileUrl: `/uploads/${file.filename}`,
+      fileName: file.originalname,
+      fileType: file.mimetype,
+      fileSize: file.size,
+    }));
+
+    if (!content && attachments.length === 0 && !req.body.poll) {
+      console.log("sendChannelMessage 400: Message content, attachment, or poll is required");
       return res.status(400).json({
         success: false,
         message: 'Message content, attachment, or poll is required',
@@ -783,23 +795,6 @@ const sendChannelMessage = async (req, res) => {
       }
     }
 
-    const storageService = require('../services/storageService');
-    const fs = require('fs');
-    const attachments = await Promise.all((req.files || []).map(async (file) => {
-      const fileBuffer = await fs.promises.readFile(file.path);
-      const uploadResult = await storageService.uploadFile(fileBuffer, file.originalname, file.mimetype, channel.organization.toString());
-      
-      // Remove temporary local file
-      try { fs.unlinkSync(file.path); } catch (e) {}
-
-      return {
-        fileKey: uploadResult.key,
-        fileName: file.originalname,
-        fileType: file.mimetype,
-        fileSize: file.size,
-      };
-    }));
-
     // Determine messageType & Poll parsing
     let messageType = req.body.messageType || 'text';
     let poll = null;
@@ -842,7 +837,7 @@ const sendChannelMessage = async (req, res) => {
         messageType = 'image';
       } else if (allVideos) {
         messageType = 'video';
-      } else if (allAudio && req.body.messageType === 'audio') {
+      } else if (allAudio) {
         messageType = 'audio';
       } else {
         messageType = 'file';
@@ -866,19 +861,6 @@ const sendChannelMessage = async (req, res) => {
     channel.lastMessage = newMessage._id;
     channel.lastMessageAt = newMessage.createdAt;
     await channel.save();
-
-    // Phase 5: Update storage quota tracking
-    if (attachments && attachments.length > 0) {
-      const totalBytes = attachments.reduce((sum, att) => sum + att.fileSize, 0);
-      try {
-        await Promise.all([
-          mongoose.model('User').findByIdAndUpdate(senderId, { $inc: { storageUsedBytes: totalBytes } }),
-          mongoose.model('Organization').findByIdAndUpdate(channel.organization, { $inc: { storageUsedBytes: totalBytes } })
-        ]);
-      } catch (err) {
-        console.error('Failed to update storage usage:', err.message);
-      }
-    }
 
     // Populate sender and references
     const populatedMessage = await Message.findById(newMessage._id)

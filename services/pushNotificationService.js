@@ -30,7 +30,11 @@ const sendPushToUser = async (userId, payload) => {
     }
 
     if (payload.data && Object.keys(payload.data).length > 0) {
-      message.data = payload.data;
+      const stringData = {};
+      for (const [key, val] of Object.entries(payload.data)) {
+        stringData[key] = val != null ? String(val) : '';
+      }
+      message.data = stringData;
     }
 
     const response = await getMessaging().sendEachForMulticast(message);

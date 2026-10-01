@@ -35,9 +35,6 @@ const protect = async (req, res, next) => {
 
       // Super Admins have no organization membership — skip org lookup entirely
       if (isSuperAdmin) {
-        // Allow super_admins to operate within the context of a specific organization if provided in the header
-        const requestedOrgId = req.headers['x-organization-id'];
-        
         req.user = {
           id: user._id.toString(),
           _id: user._id,
@@ -53,8 +50,8 @@ const protect = async (req, res, next) => {
           permissions: [],
           status: user.status || 'active',
           isDeactivated: user.status === 'inactive',
-          currentOrganization: requestedOrgId || user.currentOrganization || null,
-          currentOrganizationId: requestedOrgId ? requestedOrgId.toString() : (user.currentOrganization ? user.currentOrganization.toString() : null),
+          currentOrganization: null,
+          currentOrganizationId: null,
           pinnedChats: user.pinnedChats || [],
           pinnedChannels: user.pinnedChannels || [],
         };

@@ -6,7 +6,7 @@ exports.generateToken = async (req, res) => {
   try {
     const { roomName, participantName, conversationId, channelId } = req.body;
     const userId = req.user.id;
-    const orgId = req.user.currentOrganizationId || req.user.currentOrganization?._id?.toString() || req.user.currentOrganization?.toString();
+    const orgId = req.user.currentOrganizationId;
 
     if (!roomName || !participantName) {
       return res.status(400).json({ success: false, message: 'roomName and participantName are required' });
@@ -14,10 +14,10 @@ exports.generateToken = async (req, res) => {
 
     // Verify user authorization for the room
     if (conversationId) {
-      const conv = await Conversation.findOne({ _id: conversationId, participants: userId });
+      const conv = await Conversation.findOne({ _id: conversationId, organization: orgId, participants: userId });
       if (!conv) return res.status(403).json({ success: false, message: 'Not authorized for this conversation' });
     } else if (channelId) {
-      const channel = await Channel.findOne({ _id: channelId, members: userId });
+      const channel = await Channel.findOne({ _id: channelId, organization: orgId, 'members.user': userId });
       if (!channel) return res.status(403).json({ success: false, message: 'Not authorized for this channel' });
     } else {
       return res.status(400).json({ success: false, message: 'Must provide either conversationId or channelId' });

@@ -10,7 +10,6 @@ const {
   forwardMessage,
   addReaction,
   removeReaction,
-  downloadAttachment,
 } = require('../controllers/messageController');
 const { votePoll } = require('../controllers/pollController');
 const { protect } = require('../middleware/authMiddleware');
@@ -24,9 +23,6 @@ router.patch('/read', requireApprovedOrg, markMessagesAsRead);
 router.patch('/mark-read', requireApprovedOrg, markMessagesAsRead);
 router.get('/:messageId', requireApprovedOrg, getMessageById);
 router.patch('/:messageId/read', requireApprovedOrg, markMessageAsRead);
-
-// Download attachment
-router.get('/download', requireApprovedOrg, downloadAttachment);
 
 // Write operations — require active org + chat feature (blocked when plan is expired or suspended)
 router.patch('/:messageId', requireActiveOrg, requireFeature('chat'), editMessage);
